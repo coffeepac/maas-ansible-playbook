@@ -1,0 +1,5 @@
+---
+- hosts: localhost
+  tasks:
+    - name: Get nodes from MAAS
+      script: ./inventory/ansible_maas_dynamic_inventory.py
