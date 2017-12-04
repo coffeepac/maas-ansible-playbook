@@ -16,7 +16,7 @@ import requests
 # export MAAS_API_URL=http://<my_maas_server>/MAAS/api/2.0
 maas = os.environ.get("MAAS_API_URL", None)
 if not maas:
-    sys.exit("no MAAS_API_KEY environmental variable found. Set this to http<s>://<IP>/MAAS/api/2.0")
+    sys.exit("no MAAS_API_URL environmental variable found. Set this to http<s>://<IP>/MAAS/api/2.0")
 token = os.environ.get("MAAS_API_KEY", None)
 if not token:
     sys.exit("no MAAS_API_KEY environmental variable found. See https://maas.ubuntu.com/docs/juju-quick-start.html#getting-a-key for getting a MAAS API KEY")
@@ -62,30 +62,22 @@ def auth():
 #prepared = req.prepare()
 #pretty_print_POST(prepared)
 
-def allocate_node():
+def allocate_node(tag=""):
     headers = auth()
     headers['Accept'] = 'application/json'
     url = "%s/machines/?op=allocate" % (maas.rstrip())
-    params = {}
+    params = {"tags":('',tag)}
     response = requests.post(url, headers=headers, files=params)
     data = json.loads(response.text)
     return data
 
-def deploy_node(system_id):
+def deploy_node(system_id, cloud_config_path):
     # deploy Ubuntu
     headers = auth()
     headers['Accept'] = 'application/json'
     url = "%s/machines/%s/?op=deploy" % (maas.rstrip(), system_id)
-    # PoC for cloud-init
-    cloud_init_script = """
-#cloud-config
-write_files:
-  - path: /home/ubuntu/cloud_test.txt
-    owner: ubuntu:ubuntu
-    content: |
-      Birdfont.
-      Netcatz.
-"""
+
+    cloud_init_script = open(cloud_config_path, 'r').read()
     user_data = base64.b64encode(cloud_init_script)
     # NOTE: the requests API lets you pass a map of parameters which will
     # be encoded using the multipart/form-data encoding. ***If you
@@ -99,13 +91,31 @@ write_files:
     # passing: params = {'user_data': ('', user_data)}
     # will be encoded like:
     # Content-Disposition: form-data; name="user_data"
-    params = {'user_data': ('', user_data)}
+    params = {'user_data': ('', user_data), 'distro_series': ('', 'zesty')}
     response = requests.post(url, headers=headers, files=params)
     data = json.loads(response.text)
     return data
 
-data = allocate_node()
-data = deploy_node(data["system_id"])
+
+def get_info():
+    headers = auth()
+    headers['Accept'] = 'application/json'
+    #url = "%s/maas/?op=get_config&name=default_distro_series" % (maas.rstrip())
+    url = "%s/machines/" % (maas.rstrip())
+    params = {'name': ('', 'default_distro_series')}
+    response = requests.get(url, headers=headers, files=params)
+    #print response.text
+    jsoned = json.loads(response.text)
+    for node in jsoned:
+        if node['hostname'] == "nuc-03":
+            print node
+    exit()
+
+get_info()
+
+tag = "worker"
+data = allocate_node(tag)
+data = deploy_node(data["system_id"], "/Users/pat/.kraken/charles/cloud-config/" + tag + ".cloud-config.yaml")
 ip_address = data['interface_set'][0]['links'][0]['ip_address']
 print(ip_address)
 # ssh into machine with this ip: $ ssh ubuntu@<ip_address>
