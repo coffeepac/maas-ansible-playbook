@@ -9,6 +9,7 @@ import os
 import time
 import oauth.oauth as oauth
 import requests
+import cloudconfigcleanup
 
 
 # set these vars in your terminal
@@ -111,11 +112,70 @@ def get_info():
             print node
     exit()
 
-get_info()
+def tag_mgmt(tag):
+    #  this block creates a new tag
+    #headers = auth()
+    #headers['Accept'] = 'application/json'
+    #url = "%s/tags/" % (maas.rstrip())
+    #params = {'name': ('', tag+"_working")}
+    #response = requests.post(url, headers=headers, files=params)
+    #print response.text
+
+
+
+    headers = auth()
+    headers['Accept'] = 'application/json'
+    #url = "%s/maas/?op=get_config&name=default_distro_series" % (maas.rstrip())
+    url = "%s/tags/%s/?op=nodes" % (maas.rstrip(), tag)
+    
+    response = requests.get(url, headers=headers)
+    for node in json.loads(response.text):
+        headers = auth()
+        headers['Accept'] = 'application/json'
+        url = "%s/tags/%s/?op=update_nodes" % (maas.rstrip(), tag)
+        params = {'remove': ('', node['system_id'])}
+        response = requests.post(url, headers=headers, files=params)
+        print response.text
+
+
+
+    exit()
+
+def add_tag(tag, system_id):
+    headers = auth()
+    headers['Accept'] = 'application/json'
+    url = "%s/tags/%s/?op=update_nodes" % (maas.rstrip(), tag)
+    params = {'add': ('', system_id)}
+    response = requests.post(url, headers=headers, files=params)
+    print response.text
+
+    exit()
+
+#add_tag("etcd", "6nhkyc")
+#tag_mgmt("etcd")
+#get_info()
+
+tag = "etcd"
+cloudconfigcleanup.clean_etcd("/Users/pat/.kraken/charles-fresh/cloud-config/" + tag + ".cloud-config.yaml")
+data = allocate_node(tag)
+data = deploy_node(data["system_id"], "/Users/pat/.kraken/charles-fresh/cloud-config/" + tag + ".cloud-config.yaml")
+etcd_ip_address = data['interface_set'][0]['links'][0]['ip_address']
+
+print "etcd endpoint is: %s" % (etcd_ip_address)
+'''
+tag = "master"
+cloudconfigcleanup.clean_master("/Users/pat/.kraken/charles-fresh/cloud-config/" + tag + ".cloud-config.yaml", etcd_ip_address)
+data = allocate_node(tag)
+data = deploy_node(data["system_id"], "/Users/pat/.kraken/charles-fresh/cloud-config/" + tag + ".cloud-config.yaml")
+master_ip_address = data['interface_set'][0]['links'][0]['ip_address']
+
+print "master endpoint is: %s" % (master_ip_address)
 
 tag = "worker"
+cloudconfigcleanup.clean_worker("/Users/pat/.kraken/charles-fresh/cloud-config/" + tag + ".cloud-config.yaml", master_ip_address)
 data = allocate_node(tag)
-data = deploy_node(data["system_id"], "/Users/pat/.kraken/charles/cloud-config/" + tag + ".cloud-config.yaml")
-ip_address = data['interface_set'][0]['links'][0]['ip_address']
-print(ip_address)
-# ssh into machine with this ip: $ ssh ubuntu@<ip_address>
+data = deploy_node(data["system_id"], "/Users/pat/.kraken/charles-fresh/cloud-config/" + tag + ".cloud-config.yaml")
+worker_ip_address = data['interface_set'][0]['links'][0]['ip_address']
+
+print "worker endpoint is: %s" % (worker_ip_address)
+'''

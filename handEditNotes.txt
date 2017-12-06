@@ -1,0 +1,44 @@
+#DONE
+hand changes to etcd config:
+- change all refs from srv https to explicit ip
+- remove srv discovery flag
+- change /usr/bin/mkdir to /bin/mkdir
+#DONE
+
+hand changes to master config:
+- set etcd ip address
+- check all PreExec paths (mkdir etc)
+- remove maas specification of a cloudprovider from:
+    - kubelet service definition
+    - apiserver manifest
+    - controller manager manifest
+- add --fail-swap-on false to kubelets
+- hand install docker (sudo apt-get install docker.io)
+
+hand changes to worker config
+- change apiserver.charles.internal to ip address in 
+    - kubeproxy manifest
+    - kubeconfig
+    - proxy-kubeconfig
+- /usr/bin/mkdir -> /bin/mkdir
+- hand install docker (sudo apt-get install docker.io)
+- remove maas specification of a cloudprovider from:
+    - kubelet service definition
+- add --fail-swap-on false to kubelets
+
+
+
+* kraken.cluster_common/templates/docker-install.park.jinja2 references .url, should be .uri
+* tgz docker install assumes there is an existing docker install to be overridden (not always true)
+  - containerd and docker .service files needed
+  - missing a number of other docker files, partial list:
+    stat("/home/ubuntu/.docker/config.json", 0xc820336448) = -1 ENOENT (No such file or directory)
+stat("/home/ubuntu/.dockercfg", 0xc820336518) = -1 ENOENT (No such file or directory)
+stat("/usr/local/sbin/docker-credential-secretservice", 0xc8203365e8) = -1 ENOENT (No such file or directory)
+stat("/usr/local/bin/docker-credential-secretservice", 0xc8203366b8) = -1 ENOENT (No such file or directory)
+stat("/usr/sbin/docker-credential-secretservice", 0xc820336788) = -1 ENOENT (No such file or directory)
+stat("/usr/bin/docker-credential-secretservice", 0xc820336858) = -1 ENOENT (No such file or directory)
+stat("/sbin/docker-credential-secretservice", 0xc820336928) = -1 ENOENT (No such file or directory)
+stat("/bin/docker-credential-secretservice", 0xc8203369f8) = -1 ENOENT (No such file or directory)
+stat("/snap/bin/docker-credential-secretservice", 0xc820336ac8) = -1 ENOENT (No such file or directory)
+

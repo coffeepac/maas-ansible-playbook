@@ -94,9 +94,3 @@ def clean_worker(filepath, ipaddress):
     cloud_config = install_docker(cloud_config)
 
     clean_end(filepath, cloud_config)
-
-
-
-clean_etcd("/Users/pat/.kraken/charles-fresh/cloud-config/etcd.cloud-config.yaml")
-clean_master("/Users/pat/.kraken/charles-fresh/cloud-config/master.cloud-config.yaml", "10.0.0.0")
-clean_worker("/Users/pat/.kraken/charles-fresh/cloud-config/clusterNodes.cloud-config.yaml", "8.8.8.8")

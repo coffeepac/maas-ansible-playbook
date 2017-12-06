@@ -1,0 +1,319 @@
+---
+version: v1
+# These are the new definitions which are used throughout the configuration.
+definitions:
+  dnsConfig:
+    - &defaultDns
+      name: defaultDns
+      kind: dns
+      kubedns:
+        cluster_ip: 10.32.0.2
+        dns_domain: cluster.local
+        namespace: kube-system
+
+  helmConfigs:
+    - &defaultHelm
+      name: defaultHelm
+      kind: helm
+      repos:
+        - name: atlas
+          url: http://atlas.cnct.io
+        - name: stable
+          url: https://kubernetes-charts.storage.googleapis.com
+      charts:
+        - name: heapster
+          registry: quay.io
+          chart: samsung_cnct/heapster
+          version: 0.1.0-0
+          namespace: kube-system
+
+  fabricConfigs:
+    - &defaultCanalFabric
+      name: defaultCanalFabric
+      kind: fabric
+      type: canal
+      options:
+        containers:
+          kubePolicyController:
+            version: v0.5.1
+            location: calico/kube-policy-controller
+          etcd:
+            version: v3.0.9
+            location: quay.io/coreos/etcd
+          calicoCni:
+            version: v1.4.2
+            location: calico/cni
+          calicoNode:
+            version: v1.0.0-rc1
+            location: quay.io/calico/node
+          flannel:
+            version: v0.6.1
+            location: quay.io/coreos/flannel
+        network:
+          network: 10.128.0.0/10
+          subnetLen: 22
+          subnetMin: 10.128.0.0
+          subnetMax: 10.191.255.255
+          backend:
+            type: vxlan
+    - &defaultCanalFabric16
+      name: defaultCanalFabric16
+      kind: fabric
+      type: canal
+      options:
+        containers:
+          calicoCni:
+            version: v1.10.0
+            location: quay.io/calico/cni
+          calicoNode:
+            version: v2.4.1
+            location: quay.io/calico/node
+          flannel:
+            version: v0.8.0
+            location: quay.io/coreos/flannel
+        network:
+          network: 10.128.0.0/10
+          subnetLen: 22
+          subnetMin: 10.128.0.0
+          subnetMax: 10.191.255.255
+          backend:
+            type: vxlan
+    - &defaultCanalFabric18
+      name: defaultCanalFabric18
+      kind: fabric
+      type: canal
+      options:
+        containers:
+          calicoCni:
+            version: v1.10.0
+            location: quay.io/calico/cni
+          calicoNode:
+            version: v2.6.1
+            location: quay.io/calico/node
+          flannel:
+            version: v0.8.0
+            location: quay.io/coreos/flannel
+        network:
+          network: 10.128.0.0/10
+          subnetLen: 22
+          subnetMin: 10.128.0.0
+          subnetMax: 10.191.255.255
+          backend:
+            type: vxlan
+    - &kubeVersionedFabric
+      name: kubeVersionedFabric
+      kind: versionedFabric
+      type: canal
+      kubeVersion:
+        default: *defaultCanalFabric
+        versions:
+          v1.6: *defaultCanalFabric16
+          v1.7: *defaultCanalFabric16
+          v1.8: *defaultCanalFabric18
+    - &defaultWeaveFabric
+      name: defaultWeaveFabric
+      kind: fabric
+      type: weave
+      options:
+        containers:
+          weave:
+            version: 1.9.8
+            location: weaveworks/weave-kube
+          weave_npc:
+            version: 1.9.8
+            location: weaveworks/weave-npc
+        network:
+          network: 10.128.0.0/10
+          nodeConnectionLimit: 30
+    - &defaultWeaveFabric16
+      name: defaultWeaveFabric16
+      kind: fabric
+      type: weave
+      options:
+        containers:
+          weave:
+            version: 1.9.8
+            location: weaveworks/weave-kube
+          weave_npc:
+            version: 1.9.8
+            location: weaveworks/weave-npc
+        network:
+          network: 10.128.0.0/10
+          nodeConnectionLimit: 30
+    - &kubeVersionedWeaveFabric
+      name: kubeVersionedWeaveFabric
+      kind: versionedFabric
+      type: weave
+      kubeVersion:
+        default: *defaultWeaveFabric
+        versions:
+          v1.6: *defaultWeaveFabric16
+          v1.7: *defaultWeaveFabric16
+          v1.8: *defaultWeaveFabric16
+  kvStoreConfigs:
+    - &defaultEtcd
+      name: etcd
+      kind: kvStore
+      type: etcd
+      uuidToken: true
+      clientPorts: [2379, 4001]
+      peerPorts: [2380]
+      ssl: true
+      version: v3.2.5
+    - &defaultEtcdEvents
+      name: etcdEvents
+      kind: kvStore
+      type: etcd
+      uuidToken: true
+      clientPorts: [2381]
+      peerPorts: [2382]
+      ssl: true
+      version: v3.2.5
+
+  apiServerConfigs:
+    - &defaultApiServer
+      name: defaultApiServer
+      kind: apiServer
+      loadBalancer: cloud
+      state:
+        etcd: *defaultEtcd
+      events:
+        etcd: *defaultEtcdEvents
+
+  bastionConfigs:
+    - &defaultBastion
+      name: defaultBastion
+      kind: bastion
+
+  kubeConfigs:
+    - &defaultKube
+      name: defaultKube
+      kind: kubernetes
+      version: v1.8.1
+      hyperkubeLocation: gcr.io/google_containers/hyperkube
+
+  containerConfigs:
+    - &defaultDocker
+      name: defaultDocker
+      kind: container
+      runtime: docker
+      type: distro
+
+  osConfigs:
+    - &defaultCoreOs
+      name: defaultCoreOs
+      kind: os
+      type: coreOs
+      version: 1465.7.0
+      channel: stable
+      # If rebootStrategy is anything other than "off" then the version of
+      # CoreOS specified above will not be pinned.
+      rebootStrategy: "off"
+      locksmith:
+        etcdConfig: *defaultEtcd
+        setMax: 1
+        windowStart: 04:00
+        windowLength: 2h
+
+  nodeConfigs:
+    - &defaultMaaSNode
+      name: defaultMaaSNode
+      kind: node
+      mounts: []
+      keypair: ""
+      taints: []
+      providerConfig:
+        provider: "maas"
+        subnet: ["zone-1"]
+        tags: []
+        storage: []
+
+  providerConfigs:
+    - &defaultMaaS
+      name: defaultMaaS
+      kind: provider
+      provider: "maas"
+      type: cloudinit
+      resourcePrefix:
+      vpc: 10.0.0.0/16
+      authentication:
+        accessKey:
+        accessSecret:
+
+  keyPairs:
+   - &defaultKeyPair
+      name: defaultKeyPair
+      kind: keyPair
+      publickeyFile: "$HOME/.ssh/id_rsa.pub"
+      privatekeyFile: "$HOME/.ssh/id_rsa"
+
+  kubeAuth:
+   - &defaultKubeAuth
+      authz: {}
+      authn:
+        basic:
+          -
+            password: "ChangeMe"
+            user: "admin"
+        cert:
+          -
+            user: "admin"
+        default_basic_user: "admin"
+   - &rbacKubeAuth
+      authz:
+        rbac:
+          # super_user is required until kubernetes 1.5 is no longer supported by k2.
+          # It is not used by kubernetes 1.6 or later.
+          super_user: "placeholder"
+      authn:
+        cert:
+          -
+            user: "admin"
+            group: "system:masters"
+        default_basic_user: "admin"
+
+# This is the core of the new configuration.
+
+deployment:
+  clusters:
+    - name: maas
+      network: 10.32.0.0/12
+      dns: 10.32.0.2
+      domain: cluster.local
+      providerConfig: *defaultMaaS
+      nodePools:
+        - name: etcd
+          # 5 nodes recommended for production/high availability clusters. This
+          # configuration is required to tolerate a single node failure during
+          # node upgrades.
+          count: 1
+          etcdConfigs: [*defaultEtcd, *defaultEtcdEvents]
+          containerConfig: *defaultDocker
+          osConfig: *defaultCoreOs
+          nodeConfig: *defaultMaaSNode
+          keyPair: *defaultKeyPair
+        - name: master
+          count: 1
+          apiServerConfig: *defaultApiServer
+          kubeConfig: *defaultKube
+          containerConfig: *defaultDocker
+          osConfig: *defaultCoreOs
+          nodeConfig: *defaultMaaSNode
+          keyPair: *defaultKeyPair
+        - name: worker
+          count: 5
+          kubeConfig: *defaultKube
+          containerConfig: *defaultDocker
+          osConfig: *defaultCoreOs
+          nodeConfig: *defaultMaaSNode
+          keyPair: *defaultKeyPair
+      fabricConfig: *kubeVersionedFabric
+      kubeAuth: *rbacKubeAuth
+      helmConfig: *defaultHelm
+      dnsConfig: *defaultDns
+      # customApiDns:
+      helmOverride:
+  readiness:
+    type: exact
+    value: 0
+    wait: 600
